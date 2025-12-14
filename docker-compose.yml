@@ -1,0 +1,57 @@
+services:
+  # ----------------------------------------------------
+  # 1. Node.js Backend (NestJS)
+  # ----------------------------------------------------
+  api:
+    env_file:
+    - .env
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      # We construct the Prisma Connection string here dynamically
+      # Format: postgresql://USER:PASSWORD@HOST:PORT/DB_NAME
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+    depends_on:
+      - postgres
+      - redis
+
+  # ----------------------------------------------------
+  # 2. PostgreSQL Database
+  # ----------------------------------------------------
+  postgres:
+    env_file:
+    - .env
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      # Postgres image specific variables
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      # Maps host port (from .env) to container port (5432)
+      - "${DB_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # ----------------------------------------------------
+  # 3. Redis Cache
+  # ----------------------------------------------------
+  redis:
+    env_file:
+    - .env
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "${REDIS_PORT}:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
